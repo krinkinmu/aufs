@@ -3,10 +3,13 @@
 
 #include <cstddef>
 #include <istream>
+#include <map>
 #include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
+
+#include "aufs.hpp"
 
 class Configuration
 {
@@ -17,6 +20,7 @@ public:
 		: m_device(device)
 		, m_device_blocks(blocks)
 		, m_block_size(block_size)
+		, m_inode_blocks(CountInodeBlocks())
 	{ }
 
 	std::string const & Device() const noexcept
@@ -25,13 +29,28 @@ public:
 	size_t Blocks() const noexcept
 	{ return m_device_blocks; }
 
+	size_t InodeBlocks() const noexcept
+	{ return m_inode_blocks; }
+
 	size_t BlockSize() const noexcept
 	{ return m_block_size; }
 
 private:
+	size_t CountInodeBlocks() const noexcept
+	{
+		static size_t const BytesPerInode = 16384u;
+
+		size_t const bytes = Blocks() * BlockSize();
+		size_t const inodes = bytes / BytesPerInode;
+		size_t const in_block = BlockSize() / sizeof(struct aufs_inode);
+
+		return (inodes + in_block - 1) / in_block;
+	}
+
 	std::string	m_device;
 	size_t		m_device_blocks;
 	size_t		m_block_size;
+	size_t		m_inode_blocks;
 };
 
 using ConfigurationPtr = std::shared_ptr<Configuration>;
@@ -79,5 +98,33 @@ private:
 
 using BlockPtr = std::shared_ptr<Block>;
 using BlockConstPtr = std::shared_ptr<Block const>;
+
+
+class BlocksCache
+{
+public:
+	explicit BlocksCache(ConfigurationConstPtr config);
+	~BlocksCache();
+
+	ConfigurationConstPtr Config() const noexcept;
+	BlockPtr GetBlock(size_t no);
+	void Sync();
+
+	BlocksCache(BlocksCache &&) = delete;
+	BlocksCache & operator=(BlocksCache &&) = delete;
+
+	BlocksCache(BlocksCache const &) = delete;
+	BlocksCache & operator=(BlocksCache const &) = delete;
+
+private:
+	BlockPtr ReadBlock(std::istream &in, size_t no);
+	void WriteBlock(std::ostream &out, BlockPtr block);
+
+	ConfigurationConstPtr		m_config;
+	std::map<size_t, BlockPtr>	m_cache;
+};
+
+using BlocksCachePtr = std::shared_ptr<BlocksCache>;
+using BlocksCacheConstPtr = std::shared_ptr<BlocksCache const>;
 
 #endif /*__BLOCK_HPP__*/

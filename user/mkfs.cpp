@@ -3,8 +3,7 @@
 #include <iostream>
 #include <string>
 
-#include "aufs.hpp"
-#include "block.hpp"
+#include "format.hpp"
 
 size_t DeviceSize(std::string const & device)
 {
@@ -119,6 +118,8 @@ int main(int argc, char **argv)
 	try
 	{
 		ConfigurationConstPtr config = ParseArgs(argc - 1, argv + 1);
+		BlocksCachePtr bc = std::make_shared<BlocksCache>(config);
+		SuperBlock sb(bc);
 		return 0;
 	}
 	catch (std::exception const & e)

@@ -5,11 +5,14 @@
 #include <cstring>
 #include <cstdint>
 
+static uint32_t const AUFS_MAGIC = 0x13131313;
+
 struct aufs_super_block
 {
 	uint32_t	asb_magic;
 	uint32_t	asb_block_size;
 	uint32_t	asb_root_inode;
+	uint32_t	asb_inode_blocks;
 };
 
 static inline uint32_t & ASB_MAGIC(struct aufs_super_block *asb)
@@ -21,6 +24,9 @@ static inline uint32_t & ASB_BLOCK_SIZE(struct aufs_super_block *asb)
 static inline uint32_t & ASB_ROOT_INODE(struct aufs_super_block *asb)
 { return asb->asb_root_inode; }
 
+static inline uint32_t & ASB_INODE_BLOCKS(struct aufs_super_block *asb)
+{ return asb->asb_inode_blocks; }
+
 
 struct aufs_inode
 {
@@ -30,7 +36,7 @@ struct aufs_inode
 	uint32_t	ai_gid;
 	uint32_t	ai_uid;
 	uint32_t	ai_mode;
-	uint32_t	ai_ctime;
+	uint64_t	ai_ctime;
 };
 
 static inline uint32_t & AI_FIRST_BLOCK(struct aufs_inode *ai)
@@ -51,7 +57,7 @@ static inline uint32_t & AI_UID(struct aufs_inode *ai)
 static inline uint32_t & AI_MODE(struct aufs_inode *ai)
 { return ai->ai_mode; }
 
-static inline uint32_t & AI_CTIME(struct aufs_inode *ai)
+static inline uint64_t & AI_CTIME(struct aufs_inode *ai)
 { return ai->ai_ctime; }
 
 
