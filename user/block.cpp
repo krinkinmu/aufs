@@ -45,8 +45,8 @@ BlockPtr BlocksCache::GetBlock(size_t no)
 
 void BlocksCache::BlocksCache::Sync()
 {
-	std::ofstream out(Config()->Device().c_str(),
-		std::ios::out | std::ios::binary);
+	std::fstream out(Config()->Device().c_str(),
+		std::ios::out | std::ios::in | std::ios::binary);
 
 	std::map<size_t, BlockPtr>::iterator it(std::begin(m_cache));
 	std::map<size_t, BlockPtr>::iterator const e(std::end(m_cache));
