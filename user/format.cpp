@@ -114,6 +114,8 @@ InodePtr SuperBlock::AllocateInode()
 			static_cast<size_t>(it - b));
 	}
 
+	throw std::runtime_error("Cannot allocate inode");
+
 	return InodePtr();
 }
 
@@ -133,6 +135,8 @@ uint32_t SuperBlock::AllocateBlocks(size_t blocks) noexcept
 		}
 		it = jt;
 	}
+
+	throw std::runtime_error("Cannot allocate blocks");
 
 	return 0;
 }
