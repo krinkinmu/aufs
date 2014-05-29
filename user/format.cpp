@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <ctime>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "bit_iterator.hpp"
@@ -150,7 +151,7 @@ void SuperBlock::FillSuper() noexcept
 	root->SetSize(0);
 	root->SetUid(getuid());
 	root->SetGid(getgid());
-	root->SetMode(493);
+	root->SetMode(493 | S_IFDIR);
 
 	ASB_MAGIC(sb) = htonl(AUFS_MAGIC);
 	ASB_BLOCK_SIZE(sb) = htonl(Config()->BlockSize());
