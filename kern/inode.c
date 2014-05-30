@@ -14,7 +14,7 @@ static void aufs_inode_fill(struct aufs_inode *ai,
 	ai->ai_inode.i_mode = be32_to_cpu(di->di_mode);
 	ai->ai_inode.i_size = be32_to_cpu(di->di_size);
 	ai->ai_inode.i_blocks = be32_to_cpu(di->di_blocks);
-	ai->ai_inode.i_ctime.tv_sec = (uint32_t)be64_to_cpu(di->di_ctime);
+	ai->ai_inode.i_ctime.tv_sec = be64_to_cpu(di->di_ctime);
 	ai->ai_inode.i_mtime.tv_sec = ai->ai_inode.i_atime.tv_sec =
 				ai->ai_inode.i_ctime.tv_sec;
 	ai->ai_inode.i_mtime.tv_nsec = ai->ai_inode.i_atime.tv_nsec =
