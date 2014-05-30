@@ -105,7 +105,6 @@ struct inode *aufs_inode_alloc(struct super_block *sb)
 	if (!i)
 		return NULL;
 
-	i->ai_inode.i_sb = sb;
 	return &i->ai_inode;
 }
 
