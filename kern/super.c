@@ -42,15 +42,13 @@ static struct aufs_super_block *aufs_super_block_read(struct super_block *sb)
 	struct aufs_disk_super_block *dsb = NULL;
 	struct buffer_head *bh = NULL;
 
-	if (!asb)
-	{
+	if (!asb) {
 		pr_err("aufs cannot allocate super block\n");
 		return NULL;
 	}
 
 	bh = sb_bread(sb, 0);
-	if (!bh)
-	{
+	if (!bh) {
 		pr_err("cannot read 0 block\n");
 		goto free_memory;
 	}
@@ -59,8 +57,7 @@ static struct aufs_super_block *aufs_super_block_read(struct super_block *sb)
 	aufs_super_block_fill(asb, dsb);
 	brelse(bh);
 
-	if (asb->asb_magic != AUFS_MAGIC)
-	{
+	if (asb->asb_magic != AUFS_MAGIC) {
 		pr_err("wrong magic number %u\n", (unsigned)asb->asb_magic);
 		goto free_memory;
 	}
@@ -96,8 +93,7 @@ static int aufs_fill_sb(struct super_block *sb, void *data, int silent)
 	sb->s_fs_info = asb;
 	sb->s_op = &aufs_super_ops;
 
-	if (sb_set_blocksize(sb, asb->asb_block_size) == 0)
-	{
+	if (sb_set_blocksize(sb, asb->asb_block_size) == 0) {
 		pr_err("device does not support block size %u\n",
 					(unsigned)asb->asb_block_size);
 		return -EINVAL;
@@ -108,8 +104,7 @@ static int aufs_fill_sb(struct super_block *sb, void *data, int silent)
 		return PTR_ERR(root);
 
 	sb->s_root = d_make_root(root);
-	if (!sb->s_root)
-	{
+	if (!sb->s_root) {
 		pr_err("aufs cannot create root\n");
 		return -ENOMEM;
 	}
@@ -140,15 +135,13 @@ static struct file_system_type aufs_type = {
 static int __init aufs_init(void)
 {
 	int ret = aufs_inode_cache_create();
-	if (ret != 0)
-	{
+	if (ret != 0) {
 		pr_err("cannot create inode cache\n");
 		return ret;
 	}
 
 	ret = register_filesystem(&aufs_type);
-	if (ret != 0)
-	{
+	if (ret != 0) {
 		aufs_inode_cache_destroy();
 		pr_err("cannot register filesystem\n");
 		return ret;

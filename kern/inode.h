@@ -3,8 +3,7 @@
 
 #include <linux/fs.h>
 
-struct aufs_inode
-{
+struct aufs_inode {
 	struct inode	ai_inode;
 	uint32_t	ai_block;
 };

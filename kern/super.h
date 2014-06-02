@@ -3,8 +3,7 @@
 
 #include <linux/types.h>
 
-struct aufs_super_block
-{
+struct aufs_super_block {
 	uint32_t	asb_magic;
 	uint32_t	asb_inode_blocks;
 	uint32_t	asb_block_size;

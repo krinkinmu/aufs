@@ -61,8 +61,7 @@ struct inode *aufs_inode_get(struct super_block *sb, uint32_t no)
 				(unsigned)offset);
 
 	bh = sb_bread(sb, block);
-	if (!bh)
-	{
+	if (!bh) {
 		pr_err("cannot read block %u\n", (unsigned)block);
 		goto read_error;
 	}
