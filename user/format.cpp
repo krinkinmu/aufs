@@ -180,43 +180,41 @@ void SuperBlock::FillInodeMap(BlocksCache &cache) noexcept
 	std::fill(it + inodes, it + cache.Config()->BlockSize() * 8, false);
 }
 
-void Formatter::SetRootInode(InodePtr const &inode) noexcept
+void Formatter::SetRootInode(Inode const &inode) noexcept
 {
-	m_super.SetRootInode(inode->InodeNo());
+	m_super.SetRootInode(inode.InodeNo());
 }
 
-InodePtr Formatter::MkDir(uint32_t entries)
+Inode Formatter::MkDir(uint32_t entries)
 {
 	uint32_t const bytes = entries * sizeof(struct aufs_dir_entry);
 	uint32_t const blocks = (bytes + m_config->BlockSize() - 1) /
 					m_config->BlockSize();
-	InodePtr inode = std::make_shared<Inode>(m_cache,
-					m_super.AllocateInode());
+	Inode inode(m_cache, m_super.AllocateInode());
 	uint32_t block = m_super.AllocateBlocks(blocks);
 
-	inode->SetFirstBlock(block);
-	inode->SetBlocksCount(blocks);
-	inode->SetSize(0);
-	inode->SetUid(getuid());
-	inode->SetGid(getgid());
-	inode->SetMode(493 | S_IFDIR);
+	inode.SetFirstBlock(block);
+	inode.SetBlocksCount(blocks);
+	inode.SetSize(0);
+	inode.SetUid(getuid());
+	inode.SetGid(getgid());
+	inode.SetMode(493 | S_IFDIR);
 
 	return inode;
 }
 
-InodePtr Formatter::MkFile(uint32_t size)
+Inode Formatter::MkFile(uint32_t size)
 {
 	uint32_t const blocks = (size + m_config->BlockSize() - 1) /
 					m_config->BlockSize();
-	InodePtr inode = std::make_shared<Inode>(m_cache,
-					m_super.AllocateInode());
+	Inode inode(m_cache, m_super.AllocateInode());
 	uint32_t block = m_super.AllocateBlocks(blocks);
 
-	inode->SetFirstBlock(block);
-	inode->SetBlocksCount(blocks);
-	inode->SetUid(getuid());
-	inode->SetGid(getgid());
-	inode->SetMode(493 | S_IFREG);
+	inode.SetFirstBlock(block);
+	inode.SetBlocksCount(blocks);
+	inode.SetUid(getuid());
+	inode.SetGid(getgid());
+	inode.SetMode(493 | S_IFREG);
 
 	return inode;
 }

@@ -31,16 +31,12 @@ private:
 	struct aufs_inode *	m_raw;
 };
 
-using InodePtr = std::shared_ptr<Inode>;
-using InodeConstPtr = std::shared_ptr<Inode const>;
-
 
 class SuperBlock
 {
 public:
 	explicit SuperBlock(BlocksCache &cache);
 
-	ConfigurationConstPtr Config() const noexcept;
 	uint32_t AllocateInode() noexcept;
 	uint32_t AllocateBlocks(size_t blocks) noexcept;
 	void SetRootInode(uint32_t root) noexcept;
@@ -64,15 +60,15 @@ public:
 		, m_super(m_cache)
 	{ }
 
-	void SetRootInode(InodePtr const &inode) noexcept;
-	InodePtr MkDir(uint32_t entries);
-	InodePtr MkFile(uint32_t size);
+	void SetRootInode(Inode const &inode) noexcept;
+	Inode MkDir(uint32_t entries);
+	Inode MkFile(uint32_t size);
 
-	uint32_t Write(InodePtr &inode, uint8_t const *data,
-			uint32_t size) noexcept;
+	uint32_t Write(Inode &inode, uint8_t const *data,
+			uint32_t size);
 
-	void AddChild(InodePtr &inode, char const *name,
-			InodePtr const &ch) noexcept;
+	void AddChild(Inode &inode, char const *name,
+			Inode const &ch);
 
 private:
 	ConfigurationConstPtr	m_config;
