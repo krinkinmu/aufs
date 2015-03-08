@@ -63,28 +63,17 @@ static inline uint64_t & AI_CTIME(struct aufs_inode *ai)
 
 struct aufs_dir_entry
 {
-	uint32_t	ade_size;
+	char 		ade_name[32 - 4];
 	uint32_t	ade_inode;
-	union
-	{
-		uint32_t	dummy;
-		char		ade_name;
-	};
 };
-
-static inline uint32_t & ADE_SIZE(struct aufs_dir_entry *ade)
-{ return ade->ade_size; }
 
 static inline uint32_t & ADE_INODE(struct aufs_dir_entry *ade)
 { return ade->ade_inode; }
 
 static inline char const * ADE_NAME(struct aufs_dir_entry const *ade)
-{ return &ade->ade_name; }
+{ return ade->ade_name; }
 
 static inline char * ADE_NAME(struct aufs_dir_entry *ade)
-{
-	return const_cast<char *>(
-		ADE_NAME(const_cast<struct aufs_dir_entry const *>(ade)));
-}
+{ return ade->ade_name; }
 
 #endif /*__AUFS_HPP__*/

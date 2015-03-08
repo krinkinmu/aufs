@@ -22,4 +22,9 @@ struct aufs_disk_inode {
 	__be64	di_ctime;
 };
 
+struct aufs_disk_dir_entry {
+	char dde_name[32 - 4];
+	__be32 dde_inode;
+};
+
 #endif /*__AUFS_H__*/
