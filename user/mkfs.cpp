@@ -118,8 +118,8 @@ int main(int argc, char **argv)
 	try
 	{
 		ConfigurationConstPtr config = ParseArgs(argc - 1, argv + 1);
-		BlocksCachePtr bc = std::make_shared<BlocksCache>(config);
-		SuperBlock sb(bc);
+		Formatter format(config);
+		format.SetRootInode(format.MkDir(16));
 		return 0;
 	}
 	catch (std::exception const & e)

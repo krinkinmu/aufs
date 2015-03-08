@@ -22,7 +22,7 @@ uint64_t ntohll(uint64_t n)
 
 }
 
-Inode::Inode(BlocksCachePtr cache, uint32_t no)
+Inode::Inode(BlocksCache &cache, uint32_t no)
 	: m_inode(no)
 	, m_block(nullptr)
 	, m_raw(nullptr)
@@ -71,37 +71,30 @@ uint64_t Inode::CreateTime() const noexcept
 { return ntohll(AI_CTIME(m_raw)); }
 
 
-void Inode::FillInode(BlocksCachePtr cache)
+void Inode::FillInode(BlocksCache &cache)
 {
-	ConfigurationConstPtr const config = cache->Config();
+	ConfigurationConstPtr const config = cache.Config();
 	size_t const in_block = config->BlockSize() / sizeof(struct aufs_inode);
 	size_t const block = InodeNo() / in_block + 3;
 	size_t const index = InodeNo() % in_block;
 	size_t const offset = index * sizeof(struct aufs_inode);
 
-	m_block = cache->GetBlock(block);
+	m_block = cache.GetBlock(block);
 	m_raw = reinterpret_cast<struct aufs_inode *>(m_block->Data() + offset);
 	AI_CTIME(m_raw) = ntohll(time(NULL));
 }
 
-SuperBlock::SuperBlock(BlocksCachePtr cache)
-	: m_cache(cache)
-	, m_super_block(Cache()->GetBlock(0))
-	, m_block_map(Cache()->GetBlock(1))
-	, m_inode_map(Cache()->GetBlock(2))
+SuperBlock::SuperBlock(BlocksCache &cache)
+	: m_super_block(cache.GetBlock(0))
+	, m_block_map(cache.GetBlock(1))
+	, m_inode_map(cache.GetBlock(2))
 {
-	FillBlockMap();
-	FillInodeMap();
-	FillSuper();
+	FillBlockMap(cache);
+	FillInodeMap(cache);
+	FillSuper(cache);
 }
 
-BlocksCachePtr SuperBlock::Cache() noexcept
-{ return m_cache; }
-
-ConfigurationConstPtr SuperBlock::Config() const noexcept
-{ return m_cache->Config(); }
-
-InodePtr SuperBlock::AllocateInode()
+uint32_t SuperBlock::AllocateInode() noexcept
 {
 	BitIterator const e(m_inode_map->Data() + m_inode_map->Size() * 8, 0);
 	BitIterator const b(m_inode_map->Data(), 0);
@@ -110,13 +103,12 @@ InodePtr SuperBlock::AllocateInode()
 	if (it != e)
 	{
 		*it = false;
-		return std::make_shared<Inode>(Cache(),
-			static_cast<size_t>(it - b));
+		return static_cast<size_t>(it - b);
 	}
 
 	throw std::runtime_error("Cannot allocate inode");
 
-	return InodePtr();
+	return 0;
 }
 
 uint32_t SuperBlock::AllocateBlocks(size_t blocks) noexcept
@@ -141,50 +133,90 @@ uint32_t SuperBlock::AllocateBlocks(size_t blocks) noexcept
 	return 0;
 }
 
-void SuperBlock::FillSuper() noexcept
+void SuperBlock::SetRootInode(uint32_t root) noexcept
 {
 	struct aufs_super_block *sb =
 		reinterpret_cast<struct aufs_super_block *>(
 			m_super_block->Data());
 
-	InodePtr root = AllocateInode();
-	uint32_t block = AllocateBlocks(1);
-
-	root->SetFirstBlock(block);
-	root->SetBlocksCount(1);
-	root->SetSize(0);
-	root->SetUid(getuid());
-	root->SetGid(getgid());
-	root->SetMode(493 | S_IFDIR);
-
-	ASB_MAGIC(sb) = htonl(AUFS_MAGIC);
-	ASB_BLOCK_SIZE(sb) = htonl(Config()->BlockSize());
-	ASB_ROOT_INODE(sb) = htonl(root->InodeNo());
-	ASB_INODE_BLOCKS(sb) = htonl(Config()->InodeBlocks());
+	ASB_ROOT_INODE(sb) = htonl(root);	
 }
 
-void SuperBlock::FillBlockMap() noexcept
+void SuperBlock::FillSuper(BlocksCache &cache) noexcept
 {
-	size_t const blocks = std::min(Config()->Blocks(),
-		Config()->BlockSize() * 8);
-	size_t const inode_blocks = Config()->InodeBlocks();
+	struct aufs_super_block *sb =
+		reinterpret_cast<struct aufs_super_block *>(
+			m_super_block->Data());
+
+	ASB_MAGIC(sb) = htonl(AUFS_MAGIC);
+	ASB_BLOCK_SIZE(sb) = htonl(cache.Config()->BlockSize());
+	ASB_ROOT_INODE(sb) = 0;
+	ASB_INODE_BLOCKS(sb) = htonl(cache.Config()->InodeBlocks());
+}
+
+void SuperBlock::FillBlockMap(BlocksCache &cache) noexcept
+{
+	size_t const blocks = std::min(cache.Config()->Blocks(),
+		cache.Config()->BlockSize() * 8);
+	size_t const inode_blocks = cache.Config()->InodeBlocks();
 
 	BitIterator const it(m_block_map->Data(), 0);
 	std::fill(it, it + 3 + inode_blocks, false);
 	std::fill(it + 3 + inode_blocks, it + blocks, true);
-	std::fill(it + blocks, it + Config()->BlockSize() * 8, false); 
+	std::fill(it + blocks, it + cache.Config()->BlockSize() * 8, false); 
 }
 
-void SuperBlock::FillInodeMap() noexcept
+void SuperBlock::FillInodeMap(BlocksCache &cache) noexcept
 {
 	size_t const in_block =
-		Config()->BlockSize() / sizeof(struct aufs_inode);
-	size_t const inode_blocks = Config()->InodeBlocks();
+		cache.Config()->BlockSize() / sizeof(struct aufs_inode);
+	size_t const inode_blocks = cache.Config()->InodeBlocks();
 	size_t const inodes = std::min(inode_blocks * in_block,
-		Config()->BlockSize() * 8);
+		cache.Config()->BlockSize() * 8);
 
 	BitIterator const it(m_inode_map->Data(), 0);
 	std::fill(it, it + 1, false);
 	std::fill(it + 1, it + inodes, true);
-	std::fill(it + inodes, it + Config()->BlockSize() * 8, false);
+	std::fill(it + inodes, it + cache.Config()->BlockSize() * 8, false);
+}
+
+void Formatter::SetRootInode(InodePtr const &inode) noexcept
+{
+	m_super.SetRootInode(inode->InodeNo());
+}
+
+InodePtr Formatter::MkDir(uint32_t entries)
+{
+	uint32_t const bytes = entries * sizeof(struct aufs_dir_entry);
+	uint32_t const blocks = (bytes + m_config->BlockSize() - 1) /
+					m_config->BlockSize();
+	InodePtr inode = std::make_shared<Inode>(m_cache,
+					m_super.AllocateInode());
+	uint32_t block = m_super.AllocateBlocks(blocks);
+
+	inode->SetFirstBlock(block);
+	inode->SetBlocksCount(blocks);
+	inode->SetSize(0);
+	inode->SetUid(getuid());
+	inode->SetGid(getgid());
+	inode->SetMode(493 | S_IFDIR);
+
+	return inode;
+}
+
+InodePtr Formatter::MkFile(uint32_t size)
+{
+	uint32_t const blocks = (size + m_config->BlockSize() - 1) /
+					m_config->BlockSize();
+	InodePtr inode = std::make_shared<Inode>(m_cache,
+					m_super.AllocateInode());
+	uint32_t block = m_super.AllocateBlocks(blocks);
+
+	inode->SetFirstBlock(block);
+	inode->SetBlocksCount(blocks);
+	inode->SetUid(getuid());
+	inode->SetGid(getgid());
+	inode->SetMode(493 | S_IFREG);
+
+	return inode;
 }

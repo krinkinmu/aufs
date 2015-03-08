@@ -6,7 +6,7 @@
 class Inode
 {
 public:
-	explicit Inode(BlocksCachePtr cache, uint32_t no);
+	explicit Inode(BlocksCache &cache, uint32_t no);
 
 	uint32_t InodeNo() const noexcept;
 	uint32_t FirstBlock() const noexcept;
@@ -24,7 +24,7 @@ public:
 	uint64_t CreateTime() const noexcept;
 
 private:
-	void FillInode(BlocksCachePtr cache);
+	void FillInode(BlocksCache &cache);
 
 	uint32_t		m_inode;
 	BlockPtr		m_block;
@@ -38,22 +38,46 @@ using InodeConstPtr = std::shared_ptr<Inode const>;
 class SuperBlock
 {
 public:
-	explicit SuperBlock(BlocksCachePtr cache);
+	explicit SuperBlock(BlocksCache &cache);
 
-	BlocksCachePtr Cache() noexcept;
 	ConfigurationConstPtr Config() const noexcept;
-	InodePtr AllocateInode();
+	uint32_t AllocateInode() noexcept;
 	uint32_t AllocateBlocks(size_t blocks) noexcept;
+	void SetRootInode(uint32_t root) noexcept;
 
 private:
-	void FillSuper() noexcept;
-	void FillBlockMap() noexcept;
-	void FillInodeMap() noexcept;
+	void FillSuper(BlocksCache &cache) noexcept;
+	void FillBlockMap(BlocksCache &cache) noexcept;
+	void FillInodeMap(BlocksCache &Cache) noexcept;
 
-	BlocksCachePtr	m_cache;
 	BlockPtr	m_super_block;
 	BlockPtr	m_block_map;
 	BlockPtr	m_inode_map;
+};
+
+class Formatter
+{
+public:
+	Formatter(ConfigurationConstPtr config)
+		: m_config(config)
+		, m_cache(config)
+		, m_super(m_cache)
+	{ }
+
+	void SetRootInode(InodePtr const &inode) noexcept;
+	InodePtr MkDir(uint32_t entries);
+	InodePtr MkFile(uint32_t size);
+
+	uint32_t Write(InodePtr &inode, uint8_t const *data,
+			uint32_t size) noexcept;
+
+	void AddChild(InodePtr &inode, char const *name,
+			InodePtr const &ch) noexcept;
+
+private:
+	ConfigurationConstPtr	m_config;
+	BlocksCache		m_cache;
+	SuperBlock		m_super;
 };
 
 #endif /*__FORMAT_HPP__*/
