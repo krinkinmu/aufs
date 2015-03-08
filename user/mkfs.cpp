@@ -74,7 +74,7 @@ void PrintHelp()
 
 ConfigurationConstPtr ParseArgs(int argc, char **argv)
 {
-	std::string device;
+	std::string device, dir;
 	size_t block_size = 4096u;
 	size_t blocks = 0;
 
@@ -89,6 +89,11 @@ ConfigurationConstPtr ParseArgs(int argc, char **argv)
 		else if ((arg == "--block_size" || arg == "-s") && argc)
 		{
 			block_size = std::stoi(*argv++);
+			--argc;
+		}
+		else if ((arg == "--dir" || arg == "-d") && argc)
+		{
+			dir = *argv++;
 			--argc;
 		}
 		else if (arg == "--help" || arg == "-h")
@@ -108,7 +113,7 @@ ConfigurationConstPtr ParseArgs(int argc, char **argv)
 		blocks = std::min(DeviceSize(device) / block_size, block_size * 8);
 
 	ConfigurationConstPtr config = std::make_shared<Configuration>(
-		device, blocks, block_size);
+		device, dir, blocks, block_size);
 
 	return VerifyConfiguration(config);
 }

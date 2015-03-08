@@ -15,9 +15,11 @@ class Configuration
 {
 public:
 	explicit Configuration(std::string device,
+			std::string dir,
 			size_t blocks,
 			size_t block_size) noexcept
 		: m_device(device)
+		, m_dir(dir)
 		, m_device_blocks(blocks)
 		, m_block_size(block_size)
 		, m_inode_blocks(CountInodeBlocks())
@@ -25,6 +27,9 @@ public:
 
 	std::string const & Device() const noexcept
 	{ return m_device; }
+
+	std::string const & SourceDir() const noexcept
+	{ return m_dir; }
 
 	size_t Blocks() const noexcept
 	{ return m_device_blocks; }
@@ -48,6 +53,7 @@ private:
 	}
 
 	std::string	m_device;
+	std::string	m_dir;
 	size_t		m_device_blocks;
 	size_t		m_block_size;
 	size_t		m_inode_blocks;
@@ -123,8 +129,5 @@ private:
 	ConfigurationConstPtr		m_config;
 	std::map<size_t, BlockPtr>	m_cache;
 };
-
-using BlocksCachePtr = std::shared_ptr<BlocksCache>;
-using BlocksCacheConstPtr = std::shared_ptr<BlocksCache const>;
 
 #endif /*__BLOCK_HPP__*/
