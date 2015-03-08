@@ -8,8 +8,7 @@
 static uint32_t const AUFS_MAGIC = 0x13131313;
 static uint32_t const AUFS_NAME_MAXLEN = 28;
 
-struct aufs_super_block
-{
+struct aufs_super_block {
 	uint32_t	asb_magic;
 	uint32_t	asb_block_size;
 	uint32_t	asb_root_inode;
@@ -29,8 +28,7 @@ static inline uint32_t & ASB_INODE_BLOCKS(struct aufs_super_block *asb)
 { return asb->asb_inode_blocks; }
 
 
-struct aufs_inode
-{
+struct aufs_inode {
 	uint32_t	ai_first;
 	uint32_t	ai_blocks;
 	uint32_t	ai_size;
@@ -62,8 +60,7 @@ static inline uint64_t & AI_CTIME(struct aufs_inode *ai)
 { return ai->ai_ctime; }
 
 
-struct aufs_dir_entry
-{
+struct aufs_dir_entry {
 	char 		ade_name[AUFS_NAME_MAXLEN];
 	uint32_t	ade_inode;
 };

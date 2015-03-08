@@ -84,30 +84,20 @@ ConfigurationConstPtr ParseArgs(int argc, char **argv)
 	size_t block_size = 4096u;
 	size_t blocks = 0;
 
-	while (argc--)
-	{
+	while (argc--) {
 		std::string const arg(*argv++);
-		if ((arg == "--blocks" || arg == "-b") && argc)
-		{
+		if ((arg == "--blocks" || arg == "-b") && argc) {
 			blocks = std::stoi(*argv++);
 			--argc;
-		}
-		else if ((arg == "--block_size" || arg == "-s") && argc)
-		{
+		} else if ((arg == "--block_size" || arg == "-s") && argc) {
 			block_size = std::stoi(*argv++);
 			--argc;
-		}
-		else if ((arg == "--dir" || arg == "-d") && argc)
-		{
+		} else if ((arg == "--dir" || arg == "-d") && argc) {
 			dir = *argv++;
 			--argc;
-		}
-		else if (arg == "--help" || arg == "-h")
-		{
+		} else if (arg == "--help" || arg == "-h") {
 			PrintHelp();
-		}
-		else
-		{
+		} else {
 			device = arg;
 		}
 	}
@@ -135,8 +125,7 @@ Inode CopyFile(Formatter &fmt, std::string const &path)
 
 	Inode inode = fmt.MkFile(data.size());
 	size_t written = 0;
-	while (written != data.size())
-	{
+	while (written != data.size()) {
 		written += fmt.Write(inode,
 			reinterpret_cast<uint8_t const *>(data.data()) +
 				written,
@@ -155,8 +144,7 @@ Inode CopyDir(Formatter &fmt, std::string const &path)
 	if (!dirp.get())
 		throw std::runtime_error("cannot open dir");
 
-	while (entryp)
-	{
+	while (entryp) {
 		readdir_r(dirp.get(), &entry, &entryp);
 		if (entryp && strcmp(entry.d_name, ".")
 				&& strcmp(entry.d_name, ".."))
@@ -165,8 +153,7 @@ Inode CopyDir(Formatter &fmt, std::string const &path)
 	}
 
 	Inode inode = fmt.MkDir(entries.size());
-	for (std::string const &entry : entries)
-	{
+	for (std::string const &entry : entries) {
 		struct stat buffer;
 		if (stat((path + "/" + entry).c_str(), &buffer))
 			continue;
@@ -183,8 +170,7 @@ Inode CopyDir(Formatter &fmt, std::string const &path)
 
 int main(int argc, char **argv)
 {
-	try
-	{
+	try {
 		ConfigurationConstPtr config = ParseArgs(argc - 1, argv + 1);
 		Formatter format(config);
 
@@ -195,9 +181,7 @@ int main(int argc, char **argv)
 			format.SetRootInode(format.MkDir(16));
 
 		return 0;
-	}
-	catch (std::exception const & e)
-	{
+	} catch (std::exception const & e) {
 		std::cout << "ERROR: " << e.what() << std::endl;
 		PrintHelp();
 	}

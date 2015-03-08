@@ -12,8 +12,7 @@
 
 #include "aufs.hpp"
 
-class Configuration
-{
+class Configuration {
 public:
 	explicit Configuration(std::string device,
 			std::string dir,
@@ -65,8 +64,7 @@ using ConfigurationPtr = std::shared_ptr<Configuration>;
 using ConfigurationConstPtr = std::shared_ptr<Configuration const>;
 
 
-class Block
-{
+class Block {
 public:
 	explicit Block(ConfigurationConstPtr config, size_t no)
 		: m_config(config)
@@ -108,8 +106,7 @@ using BlockPtr = std::shared_ptr<Block>;
 using BlockConstPtr = std::shared_ptr<Block const>;
 
 
-class BlocksCache
-{
+class BlocksCache {
 public:
 	explicit BlocksCache(ConfigurationConstPtr config);
 	~BlocksCache();

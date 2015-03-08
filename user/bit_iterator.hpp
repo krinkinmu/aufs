@@ -7,8 +7,7 @@
 using BitType = unsigned char;
 static size_t const Bits = sizeof(BitType) * 8;
 
-struct BitReference
-{
+struct BitReference {
 	BitType *	m_word;
 	BitType		m_mask;
 
@@ -59,8 +58,8 @@ bool operator!=(bool l, BitReference const & r) noexcept
 { return !(l == r); }
 
 struct BitIteratorBase
-	: public std::iterator<std::random_access_iterator_tag, bool>
-{
+	: public std::iterator<std::random_access_iterator_tag, bool> {
+
 	BitType *	m_data;
 	size_t		m_offset;
 
@@ -70,8 +69,7 @@ struct BitIteratorBase
 
 	void increment() noexcept
 	{
-		if (m_offset++ == Bits - 1)
-		{
+		if (m_offset++ == Bits - 1) {
 			++m_data;
 			m_offset = 0;
 		}
@@ -79,8 +77,7 @@ struct BitIteratorBase
 
 	void decrement() noexcept
 	{
-		if (m_offset-- == 0)
-		{
+		if (m_offset-- == 0) {
 			--m_data;
 			m_offset = Bits - 1;
 		}
@@ -92,8 +89,7 @@ struct BitIteratorBase
 		m_data += n / Bits;
 		n = n % Bits;
 
-		if (n < 0)
-		{
+		if (n < 0) {
 			n += Bits;
 			--m_data;
 		}

@@ -9,12 +9,9 @@ BlocksCache::BlocksCache(ConfigurationConstPtr config)
 
 BlocksCache::~BlocksCache()
 {
-	try
-	{
+	try {
 		Sync();
-	}
-	catch (...)
-	{
+	} catch (...) {
 		std::cout << "PANIC: Cannot sync blocks with device"
 			<< std::endl;
 	}
@@ -50,8 +47,7 @@ void BlocksCache::BlocksCache::Sync()
 
 	std::map<size_t, BlockPtr>::iterator it(std::begin(m_cache));
 	std::map<size_t, BlockPtr>::iterator const e(std::end(m_cache));
-	while (it != e)
-	{
+	while (it != e) {
 		WriteBlock(out, it->second);
 		if (it->second.unique())
 			it = m_cache.erase(it);

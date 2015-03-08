@@ -100,8 +100,7 @@ uint32_t SuperBlock::AllocateInode() noexcept
 	BitIterator const b(m_inode_map->Data(), 0);
 
 	BitIterator it = std::find(b, e, true);
-	if (it != e)
-	{
+	if (it != e) {
 		*it = false;
 		return static_cast<size_t>(it - b);
 	}
@@ -117,11 +116,9 @@ uint32_t SuperBlock::AllocateBlocks(size_t blocks) noexcept
 	BitIterator const b(m_block_map->Data(), 0);
 
 	BitIterator it = std::find(b, e, true);
-	while (it != e)
-	{
+	while (it != e) {
 		BitIterator jt = std::find(it, e, false);
-		if (static_cast<size_t>(jt - it) >= blocks)
-		{
+		if (static_cast<size_t>(jt - it) >= blocks) {
 			std::fill(it, it + blocks, false);
 			return it - b;
 		}
