@@ -6,6 +6,7 @@
 #include <cstdint>
 
 static uint32_t const AUFS_MAGIC = 0x13131313;
+static uint32_t const AUFS_NAME_MAXLEN = 28;
 
 struct aufs_super_block
 {
@@ -63,7 +64,7 @@ static inline uint64_t & AI_CTIME(struct aufs_inode *ai)
 
 struct aufs_dir_entry
 {
-	char 		ade_name[32 - 4];
+	char 		ade_name[AUFS_NAME_MAXLEN];
 	uint32_t	ade_inode;
 };
 
