@@ -168,10 +168,10 @@ void SuperBlock::FillBlockMap(BlocksCache &cache) noexcept
 
 void SuperBlock::FillInodeMap(BlocksCache &cache) noexcept
 {
-	size_t const in_block =
+	uint32_t const in_block =
 		cache.Config()->BlockSize() / sizeof(struct aufs_inode);
-	size_t const inode_blocks = cache.Config()->InodeBlocks();
-	size_t const inodes = std::min(inode_blocks * in_block,
+	uint32_t const inode_blocks = cache.Config()->InodeBlocks();
+	uint32_t const inodes = std::min(inode_blocks * in_block,
 		cache.Config()->BlockSize() * 8);
 
 	BitIterator const it(m_inode_map->Data(), 0);
@@ -217,4 +217,51 @@ Inode Formatter::MkFile(uint32_t size)
 	inode.SetMode(493 | S_IFREG);
 
 	return inode;
+}
+
+uint32_t Formatter::Write(Inode &inode, uint8_t const *data, uint32_t size)
+{
+	if (!(inode.Mode() & S_IFREG))
+		throw std::logic_error("it is not file");
+
+	uint32_t const left = inode.BlocksCount() * m_config->BlockSize() -
+					inode.Size();
+	if (left < size)
+		throw std::out_of_range("there is no enough space");
+
+	uint32_t const block = inode.FirstBlock() + inode.Size() /
+					m_config->BlockSize();
+	uint32_t const offset = inode.Size() % m_config->BlockSize();
+	uint32_t const towrite = std::min(size, m_config->BlockSize() - offset);
+
+	BlockPtr bp = m_cache.GetBlock(block);
+	std::copy_n(data, towrite, bp->Data() + offset);
+	inode.SetSize(inode.Size() + towrite);
+
+	return towrite;
+}
+
+void Formatter::AddChild(Inode &inode, char const *name, Inode const &ch)
+{
+	if (!(inode.Mode() & S_IFDIR))
+		throw std::logic_error("it is not directory");
+
+	uint32_t const inblock = m_config->BlockSize() /
+					sizeof(struct aufs_dir_entry);
+	uint32_t const entries = inode.BlocksCount() * inblock;
+	uint32_t const left = entries - inode.Size();
+
+	if (!left)
+		throw std::out_of_range("there is no enough space");
+
+	uint32_t const block = inode.FirstBlock() + inode.Size() / inblock;
+	uint32_t const offset = inode.Size() % inblock;
+
+	BlockPtr bp = m_cache.GetBlock(block);
+	struct aufs_dir_entry *dp = reinterpret_cast<struct aufs_dir_entry *>(
+					bp->Data()) + offset;
+	strncpy(dp->ade_name, name, AUFS_NAME_MAXLEN - 1);
+	dp->ade_name[AUFS_NAME_MAXLEN - 1] = '\0';
+	dp->ade_inode = htonl(ch.InodeNo());
+	inode.SetSize(inode.Size() + 1);
 }
