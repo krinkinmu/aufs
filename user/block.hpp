@@ -2,6 +2,7 @@
 #define __BLOCK_HPP__
 
 #include <cstddef>
+#include <cstdint>
 #include <istream>
 #include <map>
 #include <memory>
@@ -16,8 +17,8 @@ class Configuration
 public:
 	explicit Configuration(std::string device,
 			std::string dir,
-			size_t blocks,
-			size_t block_size) noexcept
+			uint32_t blocks,
+			uint32_t block_size) noexcept
 		: m_device(device)
 		, m_dir(dir)
 		, m_device_blocks(blocks)
@@ -31,32 +32,33 @@ public:
 	std::string const & SourceDir() const noexcept
 	{ return m_dir; }
 
-	size_t Blocks() const noexcept
+	uint32_t Blocks() const noexcept
 	{ return m_device_blocks; }
 
-	size_t InodeBlocks() const noexcept
+	uint32_t InodeBlocks() const noexcept
 	{ return m_inode_blocks; }
 
-	size_t BlockSize() const noexcept
+	uint32_t BlockSize() const noexcept
 	{ return m_block_size; }
 
 private:
-	size_t CountInodeBlocks() const noexcept
+	uint32_t CountInodeBlocks() const noexcept
 	{
-		static size_t const BytesPerInode = 16384u;
+		static uint32_t const BytesPerInode = 16384u;
 
-		size_t const bytes = Blocks() * BlockSize();
-		size_t const inodes = bytes / BytesPerInode;
-		size_t const in_block = BlockSize() / sizeof(struct aufs_inode);
+		uint32_t const bytes = Blocks() * BlockSize();
+		uint32_t const inodes = bytes / BytesPerInode;
+		uint32_t const in_block = BlockSize() /
+						sizeof(struct aufs_inode);
 
 		return (inodes + in_block - 1) / in_block;
 	}
 
 	std::string	m_device;
 	std::string	m_dir;
-	size_t		m_device_blocks;
-	size_t		m_block_size;
-	size_t		m_inode_blocks;
+	uint32_t	m_device_blocks;
+	uint32_t	m_block_size;
+	uint32_t	m_inode_blocks;
 };
 
 using ConfigurationPtr = std::shared_ptr<Configuration>;
