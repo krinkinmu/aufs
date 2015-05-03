@@ -1,11 +1,9 @@
+#include <linux/aio.h>
 #include <linux/buffer_head.h>
+#include <linux/mpage.h>
 #include <linux/slab.h>
 
 #include "aufs.h"
-#include "inode.h"
-#include "super.h"
-
-static struct kmem_cache *aufs_inode_cache = NULL;
 
 static void aufs_inode_fill(struct aufs_inode *ai,
 			struct aufs_disk_inode const *di)
@@ -38,12 +36,12 @@ static size_t aufs_inode_offset(struct aufs_super_block const *asb,
 
 struct inode *aufs_inode_get(struct super_block *sb, uint32_t no)
 {
-	struct aufs_super_block const *const asb = AUFS_SB(sb);
-	struct buffer_head *bh = NULL;
-	struct aufs_disk_inode *di = NULL;
-	struct aufs_inode *ai = NULL;
-	struct inode *inode = NULL;
-	uint32_t block = 0, offset = 0;
+	struct aufs_super_block *asb = AUFS_SB(sb);
+	struct buffer_head *bh;
+	struct aufs_disk_inode *di;
+	struct aufs_inode *ai;
+	struct inode *inode;
+	uint32_t block, offset;
 
 	inode = iget_locked(sb, no);
 	if (!inode)
@@ -69,6 +67,14 @@ struct inode *aufs_inode_get(struct super_block *sb, uint32_t no)
 	di = (struct aufs_disk_inode *)(bh->b_data + offset);
 	aufs_inode_fill(ai, di);
 	brelse(bh);
+
+	inode->i_mapping->a_ops = &aufs_aops;
+	if (S_ISREG(inode->i_mode)) {
+		inode->i_fop = &aufs_file_ops;
+	} else {
+		inode->i_op = &aufs_dir_inode_ops;
+		inode->i_fop = &aufs_dir_ops;
+	}
 
 	pr_debug("aufs inode %u info:\n"
 				"\tsize   = %u\n"
@@ -96,51 +102,34 @@ read_error:
 	return ERR_PTR(-EIO);
 }
 
-struct inode *aufs_inode_alloc(struct super_block *sb)
+static int aufs_get_block(struct inode *inode, sector_t iblock,
+			struct buffer_head *bh_result, int create)
 {
-	struct aufs_inode *const i = (struct aufs_inode *)
-				kmem_cache_alloc(aufs_inode_cache, GFP_KERNEL);
-
-	if (!i)
-		return NULL;
-
-	return &i->ai_inode;
-}
-
-static void aufs_free_callback(struct rcu_head *head)
-{
-	struct inode *const inode = container_of(head, struct inode, i_rcu);
-	pr_debug("freeing inode %u\n", (unsigned)inode->i_ino);
-	kmem_cache_free(aufs_inode_cache, AUFS_INODE(inode));
-}
-
-void aufs_inode_free(struct inode *inode)
-{
-	call_rcu(&inode->i_rcu, aufs_free_callback);
-}
-
-static void aufs_inode_init_once(void *i)
-{
-	struct aufs_inode *inode = (struct aufs_inode *)i;
-	inode_init_once(&inode->ai_inode);
-}
-
-int aufs_inode_cache_create(void)
-{
-	aufs_inode_cache = kmem_cache_create("aufs_inode",
-				sizeof(struct aufs_inode),
-				0, (SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD),
-				aufs_inode_init_once);
-
-	if (aufs_inode_cache == NULL)
-		return -ENOMEM;
-
+	map_bh(bh_result, inode->i_sb, iblock + AUFS_INODE(inode)->ai_block);
 	return 0;
 }
 
-void aufs_inode_cache_destroy(void)
+static int aufs_readpage(struct file *file, struct page *page)
 {
-	rcu_barrier();
-	kmem_cache_destroy(aufs_inode_cache);
-	aufs_inode_cache = NULL;
+	return mpage_readpage(page, aufs_get_block);
 }
+
+static int aufs_readpages(struct file *file, struct address_space *mapping,
+			struct list_head *pages, unsigned nr_pages)
+{
+	return mpage_readpages(mapping, pages, nr_pages, aufs_get_block);
+}
+
+static ssize_t aufs_direct_io(int rw, struct kiocb *iocb,
+			struct iov_iter *iter, loff_t off)
+{
+	struct inode *inode = file_inode(iocb->ki_filp);
+
+	return blockdev_direct_IO(rw, iocb, inode, iter, off, aufs_get_block);
+}
+
+const struct address_space_operations aufs_aops = {
+	.readpage = aufs_readpage,
+	.readpages = aufs_readpages,
+	.direct_IO = aufs_direct_io
+};

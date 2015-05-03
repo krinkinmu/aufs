@@ -2,6 +2,10 @@
 #define __AUFS_H__
 
 #include <linux/types.h>
+#include <linux/fs.h>
+
+#define AUFS_DDE_SIZE         32
+#define AUFS_DDE_MAX_NAME_LEN (AUFS_DDE_SIZE - sizeof(__be32))
 
 static uint32_t const AUFS_MAGIC = 0x13131313;
 
@@ -23,8 +27,40 @@ struct aufs_disk_inode {
 };
 
 struct aufs_disk_dir_entry {
-	char dde_name[32 - 4];
+	char dde_name[AUFS_DDE_MAX_NAME_LEN];
 	__be32 dde_inode;
 };
+
+struct aufs_super_block {
+	uint32_t asb_magic;
+	uint32_t asb_inode_blocks;
+	uint32_t asb_block_size;
+	uint32_t asb_root_inode;
+	uint32_t asb_inodes_in_block;
+};
+
+static inline struct aufs_super_block *AUFS_SB(struct super_block *sb)
+{
+	return (struct aufs_super_block *)sb->s_fs_info;
+}
+
+struct aufs_inode {
+	struct inode ai_inode;
+	uint32_t ai_block;
+};
+
+static inline struct aufs_inode *AUFS_INODE(struct inode *inode)
+{
+	return (struct aufs_inode *)inode;
+}
+
+extern const struct address_space_operations aufs_aops;
+extern const struct inode_operations aufs_dir_inode_ops;
+extern const struct file_operations aufs_file_ops;
+extern const struct file_operations aufs_dir_ops;
+
+struct inode *aufs_inode_get(struct super_block *sb, uint32_t no);
+struct inode *aufs_inode_alloc(struct super_block *sb);
+void aufs_inode_free(struct inode *inode);
 
 #endif /*__AUFS_H__*/

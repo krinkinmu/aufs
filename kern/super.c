@@ -5,12 +5,11 @@
 #include <linux/slab.h>
 
 #include "aufs.h"
-#include "inode.h"
-#include "super.h"
 
 static void aufs_put_super(struct super_block *sb)
 {
-	struct aufs_super_block *asb = (struct aufs_super_block *)sb->s_fs_info;
+	struct aufs_super_block *asb = AUFS_SB(sb);
+
 	if (asb)
 		kfree(asb);
 	sb->s_fs_info = NULL;
@@ -37,10 +36,9 @@ static inline void aufs_super_block_fill(struct aufs_super_block *asb,
 static struct aufs_super_block *aufs_super_block_read(struct super_block *sb)
 {
 	struct aufs_super_block *asb = (struct aufs_super_block *)
-				kzalloc(sizeof(struct aufs_super_block),
-							GFP_NOFS);
-	struct aufs_disk_super_block *dsb = NULL;
-	struct buffer_head *bh = NULL;
+			kzalloc(sizeof(struct aufs_super_block), GFP_NOFS);
+	struct aufs_disk_super_block *dsb;
+	struct buffer_head *bh;
 
 	if (!asb) {
 		pr_err("aufs cannot allocate super block\n");
@@ -83,8 +81,8 @@ free_memory:
 
 static int aufs_fill_sb(struct super_block *sb, void *data, int silent)
 {
-	struct inode *root = NULL;
 	struct aufs_super_block *asb = aufs_super_block_read(sb);
+	struct inode *root;
 
 	if (!asb)
 		return -EINVAL;
@@ -115,8 +113,8 @@ static int aufs_fill_sb(struct super_block *sb, void *data, int silent)
 static struct dentry *aufs_mount(struct file_system_type *type, int flags,
 			char const *dev, void *data)
 {
-	struct dentry *const entry = mount_bdev(type, flags, dev,
-				data, aufs_fill_sb);
+	struct dentry *entry = mount_bdev(type, flags, dev, data, aufs_fill_sb);
+
 	if (IS_ERR(entry))
 		pr_err("aufs mounting failed\n");
 	else
@@ -132,9 +130,60 @@ static struct file_system_type aufs_type = {
 	.fs_flags = FS_REQUIRES_DEV
 };
 
+static struct kmem_cache *aufs_inode_cache;
+
+struct inode *aufs_inode_alloc(struct super_block *sb)
+{
+	struct aufs_inode *inode = (struct aufs_inode *)
+				kmem_cache_alloc(aufs_inode_cache, GFP_KERNEL);
+
+	if (!inode)
+		return NULL;
+	return &inode->ai_inode;
+}
+
+static void aufs_free_callback(struct rcu_head *head)
+{
+	struct inode *inode = container_of(head, struct inode, i_rcu);
+
+	pr_debug("freeing inode %u\n", (unsigned)inode->i_ino);
+	kmem_cache_free(aufs_inode_cache, AUFS_INODE(inode));
+}
+
+void aufs_inode_free(struct inode *inode)
+{
+	call_rcu(&inode->i_rcu, aufs_free_callback);
+}
+
+static void aufs_inode_init_once(void *i)
+{
+	struct aufs_inode *inode = (struct aufs_inode *)i;
+
+	inode_init_once(&inode->ai_inode);
+}
+
+static int aufs_inode_cache_create(void)
+{
+	aufs_inode_cache = kmem_cache_create("aufs_inode",
+				sizeof(struct aufs_inode),
+				0, (SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD),
+				aufs_inode_init_once);
+	if (aufs_inode_cache == NULL)
+		return -ENOMEM;
+	return 0;
+}
+
+static void aufs_inode_cache_destroy(void)
+{
+	rcu_barrier();
+	kmem_cache_destroy(aufs_inode_cache);
+	aufs_inode_cache = NULL;
+}
+
 static int __init aufs_init(void)
 {
 	int ret = aufs_inode_cache_create();
+
 	if (ret != 0) {
 		pr_err("cannot create inode cache\n");
 		return ret;
@@ -154,7 +203,8 @@ static int __init aufs_init(void)
 
 static void __exit aufs_fini(void)
 {
-	int const ret = unregister_filesystem(&aufs_type);
+	int ret = unregister_filesystem(&aufs_type);
+
 	if (ret != 0)
 		pr_err("cannot unregister filesystem\n");
 
