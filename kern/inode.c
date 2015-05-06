@@ -22,26 +22,26 @@ static void aufs_inode_fill(struct aufs_inode *ai,
 }
 
 static inline sector_t aufs_inode_block(struct aufs_super_block const *asb,
-			uint32_t inode_no)
+			ino_t inode_no)
 {
 	return (sector_t)(3 + inode_no / asb->asb_inodes_in_block);
 }
 
 static size_t aufs_inode_offset(struct aufs_super_block const *asb,
-			uint32_t inode_no)
+			ino_t inode_no)
 {
 	return sizeof(struct aufs_disk_inode) *
 				(inode_no % asb->asb_inodes_in_block);
 }
 
-struct inode *aufs_inode_get(struct super_block *sb, uint32_t no)
+struct inode *aufs_inode_get(struct super_block *sb, ino_t no)
 {
 	struct aufs_super_block *asb = AUFS_SB(sb);
 	struct buffer_head *bh;
 	struct aufs_disk_inode *di;
 	struct aufs_inode *ai;
 	struct inode *inode;
-	uint32_t block, offset;
+	size_t block, offset;
 
 	inode = iget_locked(sb, no);
 	if (!inode)
@@ -54,13 +54,12 @@ struct inode *aufs_inode_get(struct super_block *sb, uint32_t no)
 	block = aufs_inode_block(asb, no);
 	offset = aufs_inode_offset(asb, no);
 
-	pr_debug("aufs reads inode %u from %u block with offset %u\n",
-				(unsigned)no, (unsigned)block,
-				(unsigned)offset);
+	pr_debug("aufs reads inode %lu from %lu block with offset %lu\n",
+		(unsigned long)no, (unsigned long)block, (unsigned long)offset);
 
 	bh = sb_bread(sb, block);
 	if (!bh) {
-		pr_err("cannot read block %u\n", (unsigned)block);
+		pr_err("cannot read block %lu\n", (unsigned long)block);
 		goto read_error;
 	}
 
@@ -76,27 +75,27 @@ struct inode *aufs_inode_get(struct super_block *sb, uint32_t no)
 		inode->i_fop = &aufs_dir_ops;
 	}
 
-	pr_debug("aufs inode %u info:\n"
-				"\tsize   = %u\n"
-				"\tblock  = %u\n"
-				"\tblocks = %u\n"
-				"\tuid    = %u\n"
-				"\tgid    = %u\n"
-				"\tmode   = %o\n",
-				(unsigned)inode->i_ino,
-				(unsigned)inode->i_size,
-				(unsigned)ai->ai_block,
-				(unsigned)inode->i_blocks,
-				(unsigned)i_uid_read(inode),
-				(unsigned)i_gid_read(inode),
-				(unsigned)inode->i_mode);
+	pr_debug("aufs inode %lu info:\n"
+		"\tsize   = %lu\n"
+		"\tblock  = %lu\n"
+		"\tblocks = %lu\n"
+		"\tuid    = %lu\n"
+		"\tgid    = %lu\n"
+		"\tmode   = %lo\n",
+				(unsigned long)inode->i_ino,
+				(unsigned long)inode->i_size,
+				(unsigned long)ai->ai_block,
+				(unsigned long)inode->i_blocks,
+				(unsigned long)i_uid_read(inode),
+				(unsigned long)i_gid_read(inode),
+				(unsigned long)inode->i_mode);
 
 	unlock_new_inode(inode);
 
 	return inode;
 
 read_error:
-	pr_err("aufs cannot read inode %u\n", (unsigned)no);
+	pr_err("aufs cannot read inode %lu\n", (unsigned long)no);
 	iget_failed(inode);
 
 	return ERR_PTR(-EIO);

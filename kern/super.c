@@ -56,21 +56,22 @@ static struct aufs_super_block *aufs_super_block_read(struct super_block *sb)
 	brelse(bh);
 
 	if (asb->asb_magic != AUFS_MAGIC) {
-		pr_err("wrong magic number %u\n", (unsigned)asb->asb_magic);
+		pr_err("wrong magic number %lu\n",
+			(unsigned long)asb->asb_magic);
 		goto free_memory;
 	}
 
 	pr_debug("aufs super block info:\n"
-				"\tmagic           = %u\n"
-				"\tinode blocks    = %u\n"
-				"\tblock size      = %u\n"
-				"\troot inode      = %u\n"
-				"\tinodes in block = %u\n",
-				(unsigned)asb->asb_magic,
-				(unsigned)asb->asb_inode_blocks,
-				(unsigned)asb->asb_block_size,
-				(unsigned)asb->asb_root_inode,
-				(unsigned)asb->asb_inodes_in_block);
+		"\tmagic           = %lu\n"
+		"\tinode blocks    = %lu\n"
+		"\tblock size      = %lu\n"
+		"\troot inode      = %lu\n"
+		"\tinodes in block = %lu\n",
+		(unsigned long)asb->asb_magic,
+		(unsigned long)asb->asb_inode_blocks,
+		(unsigned long)asb->asb_block_size,
+		(unsigned long)asb->asb_root_inode,
+		(unsigned long)asb->asb_inodes_in_block);
 
 	return asb;
 
@@ -92,8 +93,8 @@ static int aufs_fill_sb(struct super_block *sb, void *data, int silent)
 	sb->s_op = &aufs_super_ops;
 
 	if (sb_set_blocksize(sb, asb->asb_block_size) == 0) {
-		pr_err("device does not support block size %u\n",
-					(unsigned)asb->asb_block_size);
+		pr_err("device does not support block size %lu\n",
+			(unsigned long)asb->asb_block_size);
 		return -EINVAL;
 	}
 
@@ -146,7 +147,7 @@ static void aufs_free_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
 
-	pr_debug("freeing inode %u\n", (unsigned)inode->i_ino);
+	pr_debug("freeing inode %lu\n", (unsigned long)inode->i_ino);
 	kmem_cache_free(aufs_inode_cache, AUFS_INODE(inode));
 }
 
@@ -165,9 +166,8 @@ static void aufs_inode_init_once(void *i)
 static int aufs_inode_cache_create(void)
 {
 	aufs_inode_cache = kmem_cache_create("aufs_inode",
-				sizeof(struct aufs_inode),
-				0, (SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD),
-				aufs_inode_init_once);
+		sizeof(struct aufs_inode), 0,
+		(SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD), aufs_inode_init_once);
 	if (aufs_inode_cache == NULL)
 		return -ENOMEM;
 	return 0;

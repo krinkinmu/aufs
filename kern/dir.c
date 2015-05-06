@@ -5,30 +5,30 @@
 
 #include "aufs.h"
 
-static inline unsigned aufs_dir_offset(unsigned idx)
+static size_t aufs_dir_offset(size_t idx)
 {
 	return idx * sizeof(struct aufs_disk_dir_entry);
 }
 
-static inline unsigned aufs_dir_pages(struct inode *inode)
+static size_t aufs_dir_pages(struct inode *inode)
 {
-	unsigned size = aufs_dir_offset(inode->i_size);
+	size_t size = aufs_dir_offset(inode->i_size);
 
 	return (size + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
 }
 
-static inline unsigned aufs_dir_entry_page(unsigned idx)
+static size_t aufs_dir_entry_page(size_t idx)
 {
 	return aufs_dir_offset(idx) >> PAGE_CACHE_SHIFT;
 }
 
-static inline unsigned aufs_dir_entry_offset(unsigned idx)
+static inline size_t aufs_dir_entry_offset(size_t idx)
 {
 	return aufs_dir_offset(idx) -
 			(aufs_dir_entry_page(idx) << PAGE_CACHE_SHIFT);
 }
 
-static struct page *aufs_get_page(struct inode *inode, unsigned long n)
+static struct page *aufs_get_page(struct inode *inode, size_t n)
 {
 	struct address_space *mapping = inode->i_mapping;
 	struct page *page = read_mapping_page(mapping, n, NULL);
@@ -49,16 +49,16 @@ static int aufs_dir_emit(struct dir_context *ctx,
 {
 	unsigned type = DT_UNKNOWN;
 	unsigned len = strlen(de->dde_name);
-	uint32_t ino = be32_to_cpu(de->dde_inode);
+	size_t ino = be32_to_cpu(de->dde_inode);
 
 	return dir_emit(ctx, de->dde_name, len, ino, type);
 }
 
 static int aufs_iterate(struct inode *inode, struct dir_context *ctx)
 {
-	unsigned pages = aufs_dir_pages(inode);
-	unsigned pidx = aufs_dir_entry_page(ctx->pos);
-	unsigned off = aufs_dir_entry_offset(ctx->pos);
+	size_t pages = aufs_dir_pages(inode);
+	size_t pidx = aufs_dir_entry_page(ctx->pos);
+	size_t off = aufs_dir_entry_offset(ctx->pos);
 
 	for ( ; pidx < pages; ++pidx, off = 0) {
 		struct page *page = aufs_get_page(inode, pidx);
@@ -66,8 +66,8 @@ static int aufs_iterate(struct inode *inode, struct dir_context *ctx)
 		char *kaddr;
 
 		if (IS_ERR(page)) {
-			pr_err("cannot access page %u in %u", pidx,
-						(unsigned)inode->i_ino);
+			pr_err("cannot access page %u in %lu", pidx,
+						(unsigned long)inode->i_ino);
 			return PTR_ERR(page);
 		}
 
@@ -99,7 +99,7 @@ const struct file_operations aufs_dir_ops = {
 
 struct aufs_filename_match {
 	struct dir_context ctx;
-	uint32_t ino;
+	ino_t ino;
 	const char *name;
 	int len;
 };
@@ -119,13 +119,14 @@ static int aufs_match(struct dir_context *ctx, const char *name, int len,
 	return 0;
 }
 
-static uint32_t aufs_inode_by_name(struct inode *dir, struct qstr *child)
+static ino_t aufs_inode_by_name(struct inode *dir, struct qstr *child)
 {
 	struct aufs_filename_match match = {
 		{ &aufs_match, 0 }, 0, child->name, child->len
 	};
 
 	int err = aufs_iterate(dir, &match.ctx);
+
 	if (err)
 		pr_err("Cannot find dir entry, error = %d", err);
 	return match.ino;
@@ -144,7 +145,7 @@ static struct dentry *aufs_lookup(struct inode *dir, struct dentry *dentry,
 	if (ino) {
 		inode = aufs_inode_get(dir->i_sb, ino);
 		if (IS_ERR(inode)) {
-			pr_err("Cannot read inode %u", (unsigned)ino);
+			pr_err("Cannot read inode %lu", (unsigned long)ino);
 			return ERR_PTR(PTR_ERR(inode));
 		}
 		d_add(dentry, inode);
