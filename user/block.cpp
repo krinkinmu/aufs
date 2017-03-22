@@ -40,7 +40,7 @@ BlockPtr BlocksCache::GetBlock(size_t no)
 	return block;
 }
 
-void BlocksCache::BlocksCache::Sync()
+void BlocksCache::Sync()
 {
 	std::fstream out(Config()->Device().c_str(),
 		std::ios::out | std::ios::in | std::ios::binary);
